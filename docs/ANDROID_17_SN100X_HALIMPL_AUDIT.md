@@ -36,6 +36,21 @@ Sources:
 - Its `snxxx/halimpl_v2/conf` contains **controller-specific *examples*** (SN100, SN110, SN220, SN300, PN557, PN560). Do not assume they are ready-made Xiaomi settings. A current source revision does not guarantee compatibility with existing vendor blobs, secure element or APEX signing.
 - An up-to-date variant should be evaluated as a **targeted, source-level delta** against the *official* NXP source already selected. The source-checking CI can report changed/added/removed common HAL paths for a future deliberate port, but will **not** automatically overwrite an official module, insert an unverified vendor binary or alter the default checkout.
 
+## Exact source-delta assessment — official AOSP17 vs NXP 17.07.00
+
+[Verified source comparison CI #42317340840](https://github.com/PixelExperience-Reborn/vendor_nxp_opensource_sn100x_halimpl/actions/runs/42317340840) compared **actual Git blob IDs**, not README feature claims, inside the `snxxx/` HAL subtree at pinned commits `68931d93d3b2...` (AOSP17 r1) and `debec247cea5...` (NXP17 17.07.00):
+
+| Exact Git source files | Count |
+| --- | ---: |
+| Shared paths in both source trees | **168** |
+| Shared paths with different content blobs | **84** |
+| Files present only in the NXP 17.07.00 snapshot | **0** |
+| Files present only in the official AOSP17 r1 tree | **118** |
+
+**Important:** The newer *release date* of an upstream vendor branch does **not** make it a complete superset of the actual AOSP17 HAL. This comparison cannot prove which revisions fix more bugs, which binary ABI is correct, or whether any path is selected by the current product. It does establish a concrete risk of silently **dropping 118 official AOSP17 HAL source paths** by wholesale replacement with the NXP17 vendor tree. The 84 differing files require semantic/ABI/security diff and tests before selecting individual changes. Only a genuine, device-specific improvement would justify a narrowly reviewed patch to the **existing** AOSP17 owner; no blanket import or duplicate module path.
+
+The source checker logs a sample of changed paths and official-only paths, and probes whether NFC HAL service module names are present. These results are **not an Android17 build or a comparison of installed Xiaomi vendor firmware**.
+
 ## Mondrian-specific acceptance gates
 
 1. Verify actual installed NFCC chip part and firmware, kernel device node, vendor HAL service (including VINTF manifest), SELinux domain, SKU/region and NFC/eSE/UICC wiring. Primary evidence should come from the device's **official matched firmware / trusted hardware diagnostics** and user's own authorized device when available. Avoid basing PE-Reborn on an unrelated ROM; LF52406 LineageOS may be *exceptional last-resort read-only hardware evidence*, never an imported product/device baseline.
