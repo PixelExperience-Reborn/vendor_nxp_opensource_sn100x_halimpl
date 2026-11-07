@@ -137,8 +137,22 @@ def official_nxp(repo):
     aidl_bp = source(repo, ref, "intf/nxpnfc/aidl/Android.bp")
     iface = source(repo, ref,
                    "intf/nxpnfc/aidl/vendor/nxp/nxpnfc_aidl/INxpNfc.aidl")
-    require('name: "android.hardware.nfc-service.nxp"' in bp,
-            "official NXP AOSP17 HAL source module changed")
+    require('name: "android.hardware.nfc-service.nxp"' in bp
+            and 'name: "android.hardware.nfc2-service.nxp"' in bp,
+            "official AOSP17 NFC HAL service choices changed")
+    # An AIDL V2 service module in source is NOT proof the device builds or
+    # boots it; inspect manifest/product selection and device vendor ABI.
+    vintf = ET.fromstring(
+        source(repo, ref, "snxxx/aidl/2.0/nfc2-service-nxp.xml"))
+    aidl_hal = {(h.findtext("name"), h.findtext("version"),
+                 h.findtext("fqname"), h.get("format"))
+                for h in vintf.findall("hal")}
+    require(aidl_hal == {
+        ("android.hardware.nfc", "2", "INfc/default", "aidl"),
+        ("vendor.nxp.nxpnfc_aidl", None, "INxpNfc/default", "aidl"),
+    }, "official AOSP17 NFC AIDL V2/V1 VINTF fragment changed")
+    print("PASS: official AOSP17 ALREADY defines both NFC service module"
+          " variants and exact modern AIDL V2/V1 VINTF; select one on device")
     require('name: "vendor.nxp.nxpnfc_aidl"' in aidl_bp
             and 'stability: "vintf"' in aidl_bp
             and "ndk: {" in aidl_bp,
