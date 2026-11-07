@@ -47,9 +47,17 @@ Sources:
 | Files present only in the NXP 17.07.00 snapshot | **0** |
 | Files present only in the official AOSP17 r1 tree | **118** |
 
-**Important:** The newer *release date* of an upstream vendor branch does **not** make it a complete superset of the actual AOSP17 HAL. This comparison cannot prove which revisions fix more bugs, which binary ABI is correct, or whether any path is selected by the current product. It does establish a concrete risk of silently **dropping 118 official AOSP17 HAL source paths** by wholesale replacement with the NXP17 vendor tree. The 84 differing files require semantic/ABI/security diff and tests before selecting individual changes. Only a genuine, device-specific improvement would justify a narrowly reviewed patch to the **existing** AOSP17 owner; no blanket import or duplicate module path.
+**Important:** The newer *release date* of an upstream vendor branch does **not** make it a complete superset of the actual AOSP17 HAL. This comparison cannot prove which revisions fix more bugs, which binary ABI is correct, or whether any path is selected by the current product. Whole-tree replacement would remove **118 official AOSP17 source paths**, including older compatibility-layer files under `snxxx/halimpl/` and examples. Those files are **not necessarily used by the selected product**: losing them does not automatically cause a runtime regression, but their removal must be assessed deliberately. The 84 differing common files require semantic/ABI/security diff and tests before selecting individual changes. Only a genuine, device-specific improvement would justify a narrowly reviewed patch to the **existing** AOSP17 owner; no blanket import or duplicate module path.
 
 The source checker logs a sample of changed paths and official-only paths, and probes whether NFC HAL service module names are present. These results are **not an Android17 build or a comparison of installed Xiaomi vendor firmware**.
+
+## Service-source verification and explicit AIDL selection
+
+[GitHub Actions #42317649855](https://github.com/PixelExperience-Reborn/vendor_nxp_opensource_sn100x_halimpl/actions/runs/42317649855) **SUCCESS**: the checker inspected `snxxx/Android.bp` and parsed `snxxx/aidl/2.0/nfc2-service-nxp.xml` from the **actual official Android17 r1** source. Official AOSP17 **already declares both** `android.hardware.nfc-service.nxp` and `android.hardware.nfc2-service.nxp`; its AIDL V2 VINTF fragment declares the **system** `android.hardware.nfc.INfc/default` and **vendor** `vendor.nxp.nxpnfc_aidl.INxpNfc/default`. The NXP 17.07.00 branch declares `android.hardware.nfc2-service.nxp` but not the other module.
+
+**Consequences:** There is no reason to import the separate NXP17 Git tree merely to obtain an AIDL V2 NFC HAL. Already present in official source is **not** the same as product-selected, buildable, service-running or hardware-compatible. A future independent PE-Reborn mondrian product must explicitly select a single NFC HAL variant with correct NDK interfaces, OEM firmware, VINTF, SELinux, vendor AIDL instance and NFC Mainline/SE compatibility. Do not install both HAL variants or revive HIDL.
+
+In this run all **25 staged AOSP17 manifest profiles** and **33/33 positive and adversarial manifest tests** passed. Exact source identity, Soong namespace and historical eSE boot-update hooks were checked. The **whole-platform build, vendor ABI, hardware operation and security certification remain untested**.
 
 ## Mondrian-specific acceptance gates
 
