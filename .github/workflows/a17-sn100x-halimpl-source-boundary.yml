@@ -1,0 +1,72 @@
+name: Android17 SN100x HAL vs official NXP NFC AIDL
+
+on:
+  push:
+    branches:
+      - audit/a17-sn100x-halimpl-mainline-20261107
+    paths:
+      - 'audit/check_sn100x_halimpl_aosp17.py'
+      - 'docs/ANDROID_17_SN100X_HALIMPL_AUDIT.md'
+      - '.github/workflows/a17-sn100x-halimpl-source-boundary.yml'
+  pull_request:
+    paths:
+      - 'audit/check_sn100x_halimpl_aosp17.py'
+      - 'docs/ANDROID_17_SN100X_HALIMPL_AUDIT.md'
+      - '.github/workflows/a17-sn100x-halimpl-source-boundary.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  sn100x-legacy-vs-nxp17:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Checkout isolated historical NFC source and source gate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Fetch exact 2022 archived SN100x original branch
+        run: |
+          git fetch -q --no-tags --depth=1 origin \
+            +refs/heads/seventeen:refs/remotes/origin/seventeen
+      - name: Fetch immutable official AOSP17 NXP NFC HAL release
+        run: |
+          git init -q "$RUNNER_TEMP/aosp17-nxp"
+          git -C "$RUNNER_TEMP/aosp17-nxp" remote add origin \
+            https://android.googlesource.com/platform/hardware/nxp/nfc
+          git -C "$RUNNER_TEMP/aosp17-nxp" fetch -q --no-tags \
+            --filter=blob:none --depth=1 origin \
+            refs/tags/android-17.0.0_r1:refs/tags/android-17.0.0_r1
+      - name: Fetch current NXP Android17 17.07.00 mainline source
+        run: |
+          git init -q "$RUNNER_TEMP/nxp17"
+          git -C "$RUNNER_TEMP/nxp17" remote add origin \
+            https://github.com/NXPNFCProject/nfcandroid_nfc_hidlimpl.git
+          git -C "$RUNNER_TEMP/nxp17" fetch -q --no-tags \
+            --filter=blob:none --depth=1 origin \
+            +refs/heads/br_ar_17_aosp_mainline:refs/remotes/origin/br_ar_17_aosp_mainline
+      - name: Fetch independently controlled PE-Reborn AOSP17 manifest
+        run: |
+          git clone -q --depth=1 \
+            --branch port/a17-aosp17-manifest-20261102 \
+            https://github.com/PixelExperience-Reborn/manifest.git \
+            "$RUNNER_TEMP/manifest"
+      - name: Verify exact cross-source NFC/eSE/API/manifest invariants
+        run: |
+          python3 audit/check_sn100x_halimpl_aosp17.py \
+            "$GITHUB_WORKSPACE" "$RUNNER_TEMP/aosp17-nxp" \
+            "$RUNNER_TEMP/nxp17" "$RUNNER_TEMP/manifest"
+      - name: Test all source-ownership negative and positive cases
+        run: |
+          cd "$RUNNER_TEMP/manifest"
+          python3 -m unittest discover -s tools \
+            -p test_aosp17_manifest_entrypoint.py -v
+      - name: State outcome and missing validation explicitly
+        run: |
+          echo "PASS: immutable 2022 HIDL SN100x + AOSP17 NFC AIDL + NXP17"
+          echo "source trees, actual vendor make/eSE/Soong/parser evidence,"
+          echo "current HAL delta and independently selected manifest."
+          echo "NOT TESTED: Android17 Soong, AIDL service, NFC APEX, VINTF,"
+          echo "SELinux, exact mondrian NFCC firmware/eSE, HCE, CTS/VTS or OTA."
