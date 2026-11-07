@@ -206,6 +206,21 @@ def modern_delta(official, modern):
         print("INFO: changed modern NXP file: " + path)
     if len(changed) > 12:
         print(f"INFO: {len(changed) - 12} more changed common source files")
+    for path in official_only[:18]:
+        print("INFO: AOSP17-only HAL source file: " + path)
+    if len(official_only) > 18:
+        print(f"INFO: {len(official_only) - 18} more AOSP17-only HAL files")
+    for path in newer_only[:12]:
+        print("INFO: NXP17-only HAL source file: " + path)
+    official_bp = source(official, AOSP_SHA, "snxxx/Android.bp")
+    newer_bp = source(modern, NXP_SHA, "snxxx/Android.bp")
+    for label, bp in (("official AOSP17", official_bp),
+                      ("NXP17 vendor branch", newer_bp)):
+        for svc in ('android.hardware.nfc-service.nxp',
+                    'android.hardware.nfc2-service.nxp'):
+            print(f"INFO: {label} declares {svc}:"
+                  f" {('name: ' + chr(34) + svc + chr(34)) in bp}")
+    print("DECISION: newer vendor branch is NOT necessarily a source superset")
     print("OPEN: review ABI/security/SE behavior before any targeted update")
 
 
